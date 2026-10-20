@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tokyo Xtreme Racer — Gear Ratio &amp; Speed-Per-Gear Calculator</title>
+<meta name="description" content="Enter your Tokyo Xtreme Racer gear ratios, final drive, and tire size from the transmission tuning screen to see the top speed each gear hits at redline, plus an optional quarter-mile estimate.">
+<style>
+  :root {
+    --bg: #12131a;
+    --panel: #191b25;
+    --panel-border: #2e3242;
+    --ink: #e6e8ef;
+    --ink-dim: #949cb0;
+    --accent: #c2574f;
+    --accent-bright: #e08178;
+    --field-bg: #0d0e14;
+    --warn: #c2874f;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.55;
+  }
+  main {
+    max-width: 920px;
+    margin: 0 auto;
+    padding: 32px 20px 80px;
+  }
+  h1 {
+    font-size: 1.4rem;
+    margin: 0 0 4px;
+    border-bottom: 1px solid var(--panel-border);
+    padding-bottom: 16px;
+  }
+  .sub {
+    color: var(--ink-dim);
+    font-size: 0.93rem;
+    margin: 0 0 28px;
+  }
+  .sub a { color: var(--accent-bright); }
+  .assumption-box {
+    background: rgba(194, 87, 79, 0.1);
+    border: 1px solid var(--accent);
+    border-radius: 4px;
+    padding: 12px 14px;
+    font-size: 0.85rem;
+    margin: 0 0 16px;
+  }
+  .assumption-box .label {
+    color: var(--accent-bright);
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.72rem;
+    letter-spacing: 0.03em;
+    display: block;
+    margin-bottom: 4px;
+  }
+  section {
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 6px;
+    padding: 20px 22px;
+    margin-bottom: 20px;
+  }
+  section h2 {
+    font-size: 1.1rem;
+    margin: 0 0 6px;
+  }
+  .section-note {
+    color: var(--ink-dim);
+    font-size: 0.85rem;
+    margin: 0 0 16px;
+  }
+  .field-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+  .field {
+    display: flex;
+    flex-direction: column;
+  }
+  label.field-label {
+    font-size: 0.85rem;
+    color: var(--ink-dim);
+    margin-bottom: 6px;
+  }
+  label.field-label .hint {
+    color: var(--warn);
+    font-size: 0.75rem;
+  }
+  input[type="number"] {
+    width: 100%;
+    background: var(--field-bg);
+    color: var(--ink);
+    border: 1px solid var(--panel-border);
+    border-radius: 4px;
+    padding: 9px 10px;
+    font-size: 1rem;
+  }
+  input[type="number"]:focus {
+    outline: 1px solid var(--accent);
+  }
+  .gear-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .gear-grid .field label.field-label { font-size: 0.78rem; }
+  table.speed-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 6px;
+  }
+  table.speed-table th, table.speed-table td {
+    text-align: left;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--panel-border);
+    font-size: 0.9rem;
+  }
+  table.speed-table th {
+    color: var(--ink-dim);
+    font-weight: 500;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+  }
+  table.speed-table td.mph {
+    color: var(--accent-bright);
+    font-weight: 600;
+    font-size: 1rem;
+  }
+  table.speed-table td.empty {
+    color: var(--ink-dim);
+    font-style: italic;
+  }
+  .output-box {
+    border-top: 1px solid var(--panel-border);
+    margin-top: 6px;
+    padding-top: 14px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 10px;
+  }
+  .output-cell {
+    background: var(--field-bg);
+    border: 1px solid var(--panel-border);
+    border-radius: 4px;
+    padding: 10px 12px;
+  }
+  .output-cell .output-label {
+    font-size: 0.78rem;
+    color: var(--ink-dim);
+    display: block;
+    margin-bottom: 3px;
+  }
+  .output-cell .output-value {
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: var(--accent-bright);
+  }
+  .output-cell .output-sub {
+    font-size: 0.75rem;
+    color: var(--ink-dim);
+    display: block;
+    margin-top: 3px;
+  }
+  .sources-section {
+    font-size: 0.82rem;
+    color: var(--ink-dim);
+  }
+  .sources-section h2 { font-size: 1.05rem; }
+  .sources-section ol { margin: 6px 0 16px; padding-left: 22px; }
+  .sources-section li { margin-bottom: 8px; }
+  .sources-section a { color: var(--accent-bright); }
+  .sources-section .verified { color: var(--ink); font-weight: 600; }
+  .sources-section code {
+    background: var(--field-bg);
+    border-radius: 3px;
+    padding: 1px 5px;
+  }
+  .self-test { font-size: 0.75rem; color: var(--ink-dim); margin-top: 10px; }
+  .self-test.ok { color: var(--accent-bright); }
+  .self-test.bad { color: var(--warn); }
+  footer {
+    max-width: 920px;
+    margin: 0 auto;
+    padding: 0 20px 40px;
+    font-size: 0.8rem;
+    color: var(--ink-dim);
+  }
+  footer a { color: var(--accent-bright); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Tokyo Xtreme Racer — Gear Ratio &amp; Speed-Per-Gear Calculator</h1>
+  <p class="sub">Read your tire size, final drive, gear ratios, and redline RPM off your own
+  <a href="https://store.steampowered.com/app/2634950" target="_blank" rel="noopener">Tokyo Xtreme Racer</a>
+  transmission tuning screen, type them in below, and see the top speed each gear hits at redline —
+  the thing the in-game UI doesn't show you after a gear-set or final-drive swap. The math runs in
+  your browser; nothing is saved or sent anywhere.</p>
+
+  <section>
+    <h2>Speed-per-gear chart</h2>
+    <p class="section-note">Tire circumference, final drive, your gear ratios (leave unused gears at
+    0), and redline RPM — all read from your own garage/tuning screen.</p>
+    <div class="assumption-box">
+      <span class="label">What this computes, and what it does not</span>
+      Top speed at redline in each gear, from the standard wheel-speed formula (see Sources below).
+      It assumes no wheelspin and a perfectly rigid drivetrain — real cars (and this game) lose a
+      little to tire growth and slip at high speed, so treat each number as a ceiling, not a
+      guarantee.
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label class="field-label" for="tireCirc">Tire circumference (inches)</label>
+        <input type="number" id="tireCirc" min="1" step="0.1" value="75">
+      </div>
+      <div class="field">
+        <label class="field-label" for="finalDrive">Final drive ratio</label>
+        <input type="number" id="finalDrive" min="0.1" step="0.01" value="4.1">
+      </div>
+      <div class="field">
+        <label class="field-label" for="redlineRpm">Redline RPM</label>
+        <input type="number" id="redlineRpm" min="100" step="100" value="7500">
+      </div>
+    </div>
+    <p class="section-note" style="margin-bottom:6px;">Don't know circumference? Measure tire
+    diameter in inches and multiply by 3.14159 — e.g. a 24in-diameter tire ≈ 75.4in circumference
+    (the value preloaded above).</p>
+    <div class="gear-grid" id="gearGrid"></div>
+    <table class="speed-table">
+      <thead><tr><th>Gear</th><th>Ratio</th><th>Top speed at redline</th></tr></thead>
+      <tbody id="gearTableBody"></tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>Quarter-mile estimate (optional)</h2>
+    <p class="section-note">Enter your car's power and weight from the garage screen to see a rough
+    quarter-mile time and trap speed. Leave either field blank or at 0 to skip this section.</p>
+    <div class="assumption-box">
+      <span class="label">This is a 1950s-60s drag-strip approximation, not a game-accurate measurement</span>
+      It comes from a published power-to-weight curve fit across many real cars (see Sources) — it
+      knows nothing about this game's actual drag, tire-grip, or AWD-transfer model, and cannot
+      account for launch technique or traction. Treat it as a ballpark, not a prediction of what
+      the game's own lap timer will show. No 0-60 or 0-100 figure is shown here because no
+      similarly-attested public formula for those (from power-to-weight alone) could be verified —
+      see README for what was checked and dropped.
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label class="field-label" for="power">Power (hp)</label>
+        <input type="number" id="power" min="0" step="1" value="0">
+      </div>
+      <div class="field">
+        <label class="field-label" for="weight">Weight (lb)</label>
+        <input type="number" id="weight" min="0" step="1" value="0">
+      </div>
+    </div>
+    <div class="output-box" id="quarterMileOutputBox"></div>
+  </section>
+
+  <section class="sources-section">
+    <h2>Sources &amp; last verified date</h2>
+    <p class="verified">All claims below fetched directly 2026-10-20. This page gives no gearing
+    verdict or setup recommendation anywhere — only the computed numbers.</p>
+    <ol>
+      <li><strong>Wheel-speed formula</strong> (speed = RPM &times; circumference &times; 60 &divide;
+      (gear ratio &times; final drive &times; 63,360)) — public-domain driveline physics, not a
+      Tokyo Xtreme Racer constant, so no in-game gear-ratio numbers are hardcoded. Corroborated by
+      two independently-fetched sources stating the equivalent formula:
+      <a href="https://www.youcanic.com/vehicle-speed-rpm-calculator" target="_blank" rel="noopener">youcanic.com/vehicle-speed-rpm-calculator</a>
+      and
+      <a href="https://www.firgelliauto.com/blogs/engineering-calculators/gear-ratio-speed-calculator-final-drive" target="_blank" rel="noopener">firgelliauto.com's gear-ratio speed calculator</a>,
+      both giving speed(mph) = engine RPM &times; &pi; &times; tire diameter(in) &divide; (gear
+      ratio &times; final drive &times; 1,056) — algebraically identical to the formula used here
+      once tire diameter is expressed as circumference (&pi; &times; diameter) and the 1,056/63,360
+      unit constants are reconciled (63,360 &divide; 60 = 1,056). A worked example from
+      youcanic.com (3,000 RPM, 3.73 final drive, 1.0 top gear, 28in tire &rarr; ~67mph) was
+      independently re-derived against this page's formula and matched (see test.js Scenario 1).</li>
+      <li><strong>Quarter-mile ET / trap-speed approximation (Huntington formula):</strong>
+      ET = 6.290 &times; (weight<sub>lb</sub> / hp)<sup>1/3</sup> seconds, trap speed = 224 &times;
+      (hp / weight<sub>lb</sub>)<sup>1/3</sup> mph. Multiple independent calculator/reference
+      pages agree on both the formula and its attribution to drag-racing writer Roger Huntington,
+      who fit it from roughly 40-50 road-and-strip test runs in the 1950s-60s:
+      <a href="https://www.omnicalculator.com/physics/quarter-mile" target="_blank" rel="noopener">omnicalculator.com/physics/quarter-mile</a>
+      and
+      <a href="https://www.stealth316.com/2-calc-hp-et-mph.htm" target="_blank" rel="noopener">stealth316.com's 1/4-mile ET &amp; MPH calculators</a>.
+      Both sources note this is the oldest and least precise of several later refinements (Fox
+      1973, Hale 1980s) that agree with Huntington within roughly 5%; this page uses the original
+      Huntington constants since they are the most consistently attributed across sources. This
+      formula is explicitly an empirical curve fit across many different real cars, not a physics
+      simulation, and is not a Tokyo-Xtreme-Racer-specific claim.</li>
+      <li><strong>0-60 / 0-100 time — explicitly NOT shown:</strong> search for a comparably clean,
+      consistently-attributed public formula deriving 0-60 or 0-100 time from power-to-weight ratio
+      alone turned up only uncredited forum rules-of-thumb with inconsistent units and no stated
+      derivation — not a citable source by this lane's standard. Per this lane's failure protocol,
+      that section was dropped rather than shipped with a fabricated or uncited formula; the
+      speed-per-gear chart and the quarter-mile estimate above do not depend on it.</li>
+      <li><strong>Per-car reference setups — explicitly NOT shown:</strong> one build-guide site
+      (treyexgaming.com) publishes a specific EK9 Civic Type R "Spoon Close Ratio Gear Set"
+      (1st 2.533, 2nd 1.944, 3rd 1.591, 4th 1.280, 5th 1.033, final 4.400), but no second,
+      independent source could be found stating the same specific numbers — Steam Community
+      discussion threads for this game give only general qualitative advice ("lower final drive
+      trades top speed for acceleration," "~4.1 final is a reasonable balance") without matching
+      per-car figures. Per this lane's 2-source rule for any hardcoded per-car figure, no preset is
+      shown; every number in the calculator above is typed in by the player.</li>
+    </ol>
+    <p class="self-test" id="selfTest">running self-test…</p>
+  </section>
+</main>
+
+<footer>
+  Fan-made calculator, unaffiliated with the developers or publisher of Tokyo Xtreme Racer. Figures
+  above reflect the sources cited, fetched 2026-10-20, and the quarter-mile section is a rough
+  real-world approximation that may not match this game's own physics — verify against your own
+  game's tuning and results screens before relying on a number. No account, no server, no data
+  leaves your browser.
+</footer>
+
+<script src="calc.js"></script>
+<script>
+(function () {
+  "use strict";
+  var C = window.TXRCALC;
+  var GEAR_COUNT = 6;
+
+  function num(id) {
+    var el = document.getElementById(id);
+    var v = parseFloat(el.value);
+    return isNaN(v) ? 0 : v;
+  }
+
+  function cell(label, value, sub) {
+    var div = document.createElement("div");
+    div.className = "output-cell";
+    var l = document.createElement("span");
+    l.className = "output-label";
+    l.textContent = label;
+    var v = document.createElement("span");
+    v.className = "output-value";
+    v.textContent = value;
+    div.appendChild(l);
+    div.appendChild(v);
+    if (sub) {
+      var s = document.createElement("span");
+      s.className = "output-sub";
+      s.textContent = sub;
+      div.appendChild(s);
+    }
+    return div;
+  }
+
+  // Build the 6 gear-ratio input fields once. No car's gear ratios are preloaded here — every
+  // field starts at 0 so the chart is empty until the player types in their own garage numbers.
+  var gearGrid = document.getElementById("gearGrid");
+  for (var i = 0; i < GEAR_COUNT; i++) {
+    var field = document.createElement("div");
+    field.className = "field";
+    var label = document.createElement("label");
+    label.className = "field-label";
+    label.setAttribute("for", "gear" + (i + 1));
+    label.textContent = "Gear " + (i + 1) + " ratio";
+    var input = document.createElement("input");
+    input.type = "number";
+    input.id = "gear" + (i + 1);
+    input.min = "0";
+    input.step = "0.001";
+    input.value = 0;
+    field.appendChild(label);
+    field.appendChild(input);
+    gearGrid.appendChild(field);
+  }
+
+  function renderGears() {
+    var rpm = num("redlineRpm");
+    var circ = num("tireCirc");
+    var finalDrive = num("finalDrive");
+    var ratios = [];
+    for (var i = 0; i < GEAR_COUNT; i++) {
+      ratios.push(num("gear" + (i + 1)));
+    }
+
+    var rows = C.speedPerGear({ rpm: rpm, circumferenceIn: circ, finalDrive: finalDrive, gearRatios: ratios });
+    var body = document.getElementById("gearTableBody");
+    body.innerHTML = "";
+    rows.forEach(function (row) {
+      if (!(row.ratio > 0)) { return; }
+      var tr = document.createElement("tr");
+      var tdGear = document.createElement("td");
+      tdGear.textContent = row.gear;
+      var tdRatio = document.createElement("td");
+      tdRatio.textContent = row.ratio;
+      var tdMph = document.createElement("td");
+      if (row.mph === null) {
+        tdMph.className = "empty";
+        tdMph.textContent = "enter RPM / tire / final drive";
+      } else {
+        tdMph.className = "mph";
+        tdMph.textContent = row.mph.toFixed(1) + " mph";
+      }
+      tr.appendChild(tdGear);
+      tr.appendChild(tdRatio);
+      tr.appendChild(tdMph);
+      body.appendChild(tr);
+    });
+    if (!body.children.length) {
+      var tr2 = document.createElement("tr");
+      var td2 = document.createElement("td");
+      td2.colSpan = 3;
+      td2.className = "empty";
+      td2.textContent = "Enter at least one gear ratio above 0.";
+      tr2.appendChild(td2);
+      body.appendChild(tr2);
+    }
+  }
+
+  function renderQuarterMile() {
+    var power = num("power");
+    var weight = num("weight");
+    var box = document.getElementById("quarterMileOutputBox");
+    box.innerHTML = "";
+
+    var r = C.quarterMileEstimate({ weightLb: weight, hp: power });
+    if (!r) {
+      box.appendChild(cell("Quarter-mile ET", "—", "enter power and weight above 0 to estimate"));
+      box.appendChild(cell("Trap speed", "—", "enter power and weight above 0 to estimate"));
+      return;
+    }
+    box.appendChild(cell("Quarter-mile ET (estimate)", r.etSeconds.toFixed(2) + " s", "Huntington power-to-weight approximation — not a game-measured time"));
+    box.appendChild(cell("Trap speed (estimate)", r.trapMph.toFixed(1) + " mph", "speed at the 1/4-mile mark, same approximation"));
+  }
+
+  var gearInputIds = ["tireCirc", "finalDrive", "redlineRpm"];
+  for (var g = 0; g < GEAR_COUNT; g++) { gearInputIds.push("gear" + (g + 1)); }
+  gearInputIds.forEach(function (id) {
+    document.getElementById(id).addEventListener("input", renderGears);
+  });
+  ["power", "weight"].forEach(function (id) {
+    document.getElementById(id).addEventListener("input", renderQuarterMile);
+  });
+
+  renderGears();
+  renderQuarterMile();
+
+  // In-page mirror of key headless known-answer tests in test.js, so opening the file directly
+  // also proves the math without a terminal.
+  (function selfTest() {
+    var el = document.getElementById("selfTest");
+    var pass = 0, total = 5;
+    var a = C.gearTopSpeedMph({ rpm: 3000, circumferenceIn: 28 * Math.PI, gearRatio: 1.0, finalDrive: 3.73 });
+    if (Math.abs(a - 66.997) < 0.01) pass++;
+    var b = C.gearTopSpeedMph({ rpm: 7000, circumferenceIn: 75, gearRatio: 1.0, finalDrive: 3.0 });
+    if (Math.abs(b - 165.720) < 0.01) pass++;
+    var c = C.gearTopSpeedMph({ rpm: 6500, circumferenceIn: 80, gearRatio: 2.0, finalDrive: 4.1 });
+    if (Math.abs(c - 60.052) < 0.01) pass++;
+    var d = C.quarterMileEstimate({ weightLb: 3000, hp: 300 });
+    if (Math.abs(d.etSeconds - 13.551) < 0.01 && Math.abs(d.trapMph - 103.972) < 0.01) pass++;
+    var e = C.quarterMileEstimate({ weightLb: 2500, hp: 500 });
+    if (Math.abs(e.etSeconds - 10.756) < 0.01 && Math.abs(e.trapMph - 130.996) < 0.01) pass++;
+    el.textContent = "self-test: " + pass + "/" + total + " known-answer scenarios passed";
+    el.className = "self-test " + (pass === total ? "ok" : "bad");
+  })();
+})();
+</script>
+</body>
+</html>
